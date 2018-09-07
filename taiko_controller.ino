@@ -8,9 +8,13 @@ const long cd_antireso_length = 8000;
 const float k_antireso = 0.85;
 const float k_decay = 0.96;
 
+const int pin[4] = {A3, A0, A2, A1};
+const int key[4] = {'d', 'f', 'j', 'k'};
+
 const int key_next[4] = {1, 3, 0, 2};
 
 const long cd_stageselect = 200000;
+
 bool stageselect = false;
 bool stageresult = false;
 
@@ -21,9 +25,6 @@ long cd[4] = {0, 0, 0, 0};
 bool pressed[4] = {false, false, false, false};
 int t0 = 0;
 int dt = 0, sdt = 0;
-
-const int pin[4] = {A3, A0, A2, A1};
-const int key[4] = {'d', 'f', 'j', 'k'};
 
 void sample() {
   int prev[4] = {raw[0], raw[1], raw[2], raw[3]};
