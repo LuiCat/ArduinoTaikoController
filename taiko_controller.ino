@@ -1,10 +1,14 @@
 #include <Keyboard.h>
 
+//#define DEBUG_OUTPUT
+
 const int min_threshold = 20;
 const long cd_length = 8000;
 const long cd_antireso_length = 8000;
 const float k_antireso = 0.85;
 const float k_decay = 0.96;
+
+const int key_next[4] = {1, 3, 0, 2};
 
 const long cd_stageselect = 200000;
 bool stageselect = false;
@@ -95,7 +99,9 @@ void loop() {
       if (cd[i] <= 0) {
         cd[i] = 0;
         if (pressed[i]) {
+#ifndef DEBUG_OUTPUT
           Keyboard.release(stageresult ? KEY_ESC : key[i]);
+#endif
           pressed[i] = false;
         }
       }
@@ -112,52 +118,63 @@ void loop() {
     }
   }
 
-  if (i_max == si && level_max > min_threshold) {
-    if (!pressed[i_max]) {
-      if (stageresult) {
-        Keyboard.press(KEY_ESC);
-      } else {
-        Keyboard.press(key[i_max]);
+  if (i_max == si && level_max >= min_threshold) {
+    if (cd[i_max] == 0) {
+      if (!pressed[i_max]) {
+#ifndef DEBUG_OUTPUT
+        if (stageresult) {
+          Keyboard.press(KEY_ESC);
+        } else {
+          Keyboard.press(key[i_max]);
+        }
+#endif
+        pressed[i_max] = true;
       }
-      pressed[i_max] = true;
+      for (int i = 0; i != 4; ++i)
+        cd[i] = cd_antireso_length;
+      cd[i_max] = (stageselect ? cd_stageselect : cd_length);
     }
+    float level_antireso = level_max * k_antireso;
     for (int i = 0; i != 4; ++i)
-      cd[i] = cd_antireso_length;
-    cd[i_max] = (stageselect ? cd_stageselect : cd_length);
-    for (int i = 0; i != 4; ++i)
-      threshold[i] = max(threshold[i], level_max * k_antireso);
-    threshold[i_max] = level_max;
+      threshold[i] = max(threshold[i], level_antireso);
+    threshold[i_max] = (cd[i_max] == 0 ? level_max : level_max * 1.5);
     sdt = 0;
   }
-  
-  /*
-  if (level[0]+level[1]+level[2]+level[3] > 10){
-    Serial.print(level[0]);
-    Serial.print("\t");
-    Serial.print(level[1]);
-    Serial.print("\t");
-    Serial.print(level[2]);
-    Serial.print("\t");
-    Serial.print(level[3]);
-    Serial.print("\t| ");
-    Serial.print(cd[0] == 0 ? "  " : "# ");
-    Serial.print(cd[1] == 0 ? "  " : "# ");
-    Serial.print(cd[2] == 0 ? "  " : "# ");
-    Serial.print(cd[3] == 0 ? "  " : "# ");
-    Serial.print("|\t");
-    Serial.print((int)threshold[0]);
-    Serial.print("\t");
-    Serial.print((int)threshold[1]);
-    Serial.print("\t");
-    Serial.print((int)threshold[2]);
-    Serial.print("\t");
-    Serial.print((int)threshold[3]);
-    Serial.println();
-  }
-  */
 
-  
+#ifdef DEBUG_OUTPUT
+  static bool printing = false;
+  if (si == 0) {
+    if (level[0]+level[1]+level[2]+level[3] >= min_threshold || cd[0] || cd[1] || cd[2] || cd[3]){
+      Serial.print(level[0]);
+      Serial.print("\t");
+      Serial.print(level[1]);
+      Serial.print("\t");
+      Serial.print(level[2]);
+      Serial.print("\t");
+      Serial.print(level[3]);
+      Serial.print("\t| ");
+      Serial.print(cd[0] == 0 ? "  " : pressed[0] ? "# " : "* ");
+      Serial.print(cd[1] == 0 ? "  " : pressed[1] ? "# " : "* ");
+      Serial.print(cd[2] == 0 ? "  " : pressed[2] ? "# " : "* ");
+      Serial.print(cd[3] == 0 ? "  " : pressed[3] ? "# " : "* ");
+      Serial.print("|\t");
+      Serial.print((int)threshold[0]);
+      Serial.print("\t");
+      Serial.print((int)threshold[1]);
+      Serial.print("\t");
+      Serial.print((int)threshold[2]);
+      Serial.print("\t");
+      Serial.print((int)threshold[3]);
+      Serial.println();
+      printing = true;
+    }else if(printing){
+      Serial.println("=============================================================================");
+      printing = false;
+    }
+  }
+#endif
+
   sampleSingle(si);
-  si = (si + 1) & 3;
+  si = key_next[si];
   
 }
