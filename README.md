@@ -27,7 +27,7 @@ To determine an optimal value for this level, try enabling debug info.
 Usually, this value is only used to ignore sensor noises, but you can use this level as a sensitivity level.
 
 #### cd_length = 8000
-The cooldown length of the triggered sensor, in microseconds (1x10^-6).
+The cooldown length of the triggered sensor, in microseconds (=1x10^-6s).
 
 While a sensor is in its cooldown period, no input will be generated for it, but the threshold level would still be updated.
 During the cooldown period, the corresponding key of the sensor is kept pressed. When it ended, the key is released.
@@ -45,7 +45,7 @@ How much the thresholds of every sensor other than the triggered one are raised 
 #### k_decay = 0.96
 How fast every threshold level decays, in ratio.
 
-For approximately every millisecond the threshold is lowered by k_decay.
+For approximately every millisecond, the threshold value of every channel is multiplied by k_decay.
 
 #### pin[4] = {A3, A0, A2, A1}
 The analog input pins of four sensors.
