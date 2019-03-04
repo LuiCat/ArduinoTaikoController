@@ -1,17 +1,46 @@
-#include <Keyboard.h>
-
 //#define DEBUG_OUTPUT
+//#define DEBUG_OUTPUT_LIVE
+//#define ENABLE_KEYBOARD
 
-const int min_threshold = 20;
-const long cd_length = 8000;
-const long cd_antireso_length = 8000;
-const float k_antireso = 0.85;
-const float k_decay = 0.96;
+#define ENABLE_NS_JOYSTICK
 
-const int pin[4] = {A3, A0, A2, A1};
-const int key[4] = {'d', 'f', 'j', 'k'};
+#ifdef ENABLE_KEYBOARD
+#include <Keyboard.h>
+#endif
 
-const int key_next[4] = {1, 3, 0, 2};
+#ifdef ENABLE_NS_JOYSTICK
+#include "Joystick.h"
+const int led_pin[4] = {8, 9, 10, 11};
+const int sensor_button[4] = {SWITCH_BTN_ZL, SWITCH_BTN_LCLICK, SWITCH_BTN_RCLICK, SWITCH_BTN_ZR};
+const int button[16] = {
+  0 /*SWITCH_HAT_U*/, 0 /*SWITCH_HAT_R*/, 0 /*SWITCH_HAT_D*/, 0 /*SWITCH_HAT_L*/,
+  SWITCH_BTN_X, SWITCH_BTN_A, SWITCH_BTN_B, SWITCH_BTN_Y,
+  SWITCH_BTN_L, SWITCH_BTN_R, SWITCH_BTN_SELECT, SWITCH_BTN_START,
+  SWITCH_BTN_CAPTURE, SWITCH_BTN_HOME, 0 /*Fn1*/, 0 /*Fn2*/
+};
+const int hat_mapping[16] = {
+  SWITCH_HAT_CENTER, SWITCH_HAT_U, SWITCH_HAT_R, SWITCH_HAT_UR,
+  SWITCH_HAT_D, SWITCH_HAT_CENTER, SWITCH_HAT_DR, SWITCH_HAT_R,
+  SWITCH_HAT_L, SWITCH_HAT_UL, SWITCH_HAT_CENTER, SWITCH_HAT_U,
+  SWITCH_HAT_DL, SWITCH_HAT_L, SWITCH_HAT_D, SWITCH_HAT_CENTER,
+};
+int button_state[16] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+int button_cd[16] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+#endif
+
+const int min_threshold = 10;
+const long cd_length = 16000;
+const long cd_antireso_length = 16000;
+const float k_threshold = 1.5;
+const float k_antireso = 1.5;
+const float k_decay = 0.983;
+
+const int pin[4] = {A0, A3, A1, A2};
+const int key[4] = {'d', '
+f', 'j', 'k'};
+const float sens[4] = {1.0, 1.0, 0.8, 0.8};
+
+const int key_next[4] = {2, 0, 3, 1};
 
 const long cd_stageselect = 200000;
 
@@ -20,11 +49,16 @@ bool stageresult = false;
 
 float threshold[4] = {20, 20, 20, 20};
 int raw[4] = {0, 0, 0, 0};
-int level[4] = {0, 0, 0, 0};
+float level[4] = {0, 0, 0, 0};
 long cd[4] = {0, 0, 0, 0};
+bool down[4] = {false, false, false, false};
+#ifdef ENABLE_NS_JOYSTICK
 bool pressed[4] = {false, false, false, false};
-int t0 = 0;
-int dt = 0, sdt = 0;
+#endif
+
+typedef unsigned long time_t;
+time_t t0 = 0;
+time_t dt = 0, sdt = 0;
 
 void sample() {
   int prev[4] = {raw[0], raw[1], raw[2], raw[3]};
@@ -33,20 +67,26 @@ void sample() {
   raw[2] = analogRead(pin[2]);
   raw[3] = analogRead(pin[3]);
   for (int i=0; i<4; ++i)
-    level[i] = abs(raw[i] - prev[i]);
+    level[i] = abs(raw[i] - prev[i]) * sens[i];
 }
 
 void sampleSingle(int i) {
   int prev = raw[i];
   raw[i] = analogRead(pin[i]);
-  level[i] = abs(raw[i] - prev);
+  level[i] = abs(raw[i] - prev) * sens[i];
 }
 
 void setup() {
   analogReference(DEFAULT); // use internal 1.1v as reference voltage
   pinMode(LED_BUILTIN, OUTPUT);
   digitalWrite(LED_BUILTIN, LOW);
+#ifdef ENABLE_NS_JOYSTICK
+  for (int i = 0; i < 8; ++i) pinMode(i, INPUT_PULLUP);
+  for (int i = 0; i < 4; ++i) {  digitalWrite(led_pin[i], HIGH); pinMode(led_pin[i], OUTPUT); }
+#endif
+#ifdef ENABLE_KEYBOARD
   Keyboard.begin();
+#endif
   t0 = micros();
   Serial.begin(9600);
 }
@@ -78,32 +118,65 @@ void parseSerial() {
   }
 }
 
+void loop_test() {
+  sampleSingle(0);
+  Serial.print(level[0]);
+  Serial.print("\t");
+  delayMicroseconds(500);
+  sampleSingle(1);
+  Serial.print(level[1]);
+  Serial.print("\t");
+  delayMicroseconds(500);
+  sampleSingle(2);
+  Serial.print(level[2]);
+  Serial.print("\t");
+  delayMicroseconds(500);
+  sampleSingle(3);
+  Serial.print(level[3]);
+  Serial.println();
+  delayMicroseconds(500);
+}
+
+void loop_test2() {
+  Serial.print(analogRead(pin[0]));
+  Serial.print("\t");
+  delayMicroseconds(500);
+  Serial.print(analogRead(pin[1]));
+  Serial.print("\t");
+  delayMicroseconds(500);
+  Serial.print(analogRead(pin[2]));
+  Serial.print("\t");
+  delayMicroseconds(500);
+  Serial.print(analogRead(pin[3]));
+  Serial.println();
+  delayMicroseconds(500);
+}
+
 void loop() {
+  //loop_test2(); return;
+  
   static int si = 0;
 
   parseSerial();
   
-  int t1 = micros();
+  time_t t1 = micros();
   dt = t1 - t0;
   sdt += dt;
   t0 = t1;
   
-  while (sdt >= 1000) {
-    sdt -= 1000;
-    for (int i = 0; i != 4; ++i)
-      threshold[i] *= k_decay;
-  }
+  for (int i = 0; i != 4; ++i)
+    threshold[i] *= k_decay;
 
   for (int i = 0; i != 4; ++i) {
     if (cd[i] > 0) {
       cd[i] -= dt;
       if (cd[i] <= 0) {
         cd[i] = 0;
-        if (pressed[i]) {
-#ifndef DEBUG_OUTPUT
+        if (down[i]) {
+#ifdef ENABLE_KEYBOARD
           Keyboard.release(stageresult ? KEY_ESC : key[i]);
 #endif
-          pressed[i] = false;
+          down[i] = false;
         }
       }
     }
@@ -121,15 +194,18 @@ void loop() {
 
   if (i_max == si && level_max >= min_threshold) {
     if (cd[i_max] == 0) {
-      if (!pressed[i_max]) {
-#ifndef DEBUG_OUTPUT
+      if (!down[i_max]) {
+#ifdef ENABLE_KEYBOARD
         if (stageresult) {
           Keyboard.press(KEY_ESC);
         } else {
           Keyboard.press(key[i_max]);
         }
 #endif
+        down[i_max] = true;
+#ifdef ENABLE_NS_JOYSTICK
         pressed[i_max] = true;
+#endif
       }
       for (int i = 0; i != 4; ++i)
         cd[i] = cd_antireso_length;
@@ -138,44 +214,102 @@ void loop() {
     float level_antireso = level_max * k_antireso;
     for (int i = 0; i != 4; ++i)
       threshold[i] = max(threshold[i], level_antireso);
-    threshold[i_max] = (cd[i_max] == 0 ? level_max : level_max * 1.5);
+    threshold[i_max] = level_max * k_threshold;
     sdt = 0;
   }
+  
+#ifdef ENABLE_NS_JOYSTICK
+  // 4x4 button scan, one row per cycle
+  static int bi = 3;
+  pinMode(bi+4, INPUT_PULLUP);
+  bi = ((bi+1)&3);
+  pinMode(bi+4, OUTPUT);
+  digitalWrite(bi+4, LOW);
+  
+  static time_t ct = 0;
+  static int cc = 0;
+  ct += dt;
+  cc += 1;
+  
+  int state;
+  int* bs = button_state + (bi << 2);
+  int* bc = button_cd + (bi << 2);
+  for (int i = 0; i < 4; ++i) {
+    state = (digitalRead(i) == LOW);
+    //digitalWrite(led_pin[i], state ? LOW : HIGH);
+    if (bc[i] != 0) {
+      bc[i] -= ct;
+      if (bc[i] < 0) bc[i] = 0;
+    }
+    if (state != bs[i] && bc[i] == 0) {
+      bs[i] = state;
+      bc[i] = 15000;
+    }
+    Joystick.Button |= (bs[i] ? button[(bi << 2) + i] : SWITCH_BTN_NONE);
+  }
+  
+  if (ct > 32000 || (ct > 8000 && (pressed[0] || pressed[1] || pressed[2] || pressed[3]))) {
+    for (int i = 0; i < 4; ++i) { // Sensors
+      Joystick.Button |= (pressed[i] ? sensor_button[i] : SWITCH_BTN_NONE);
+      digitalWrite(led_pin[i], pressed[i] ? LOW : HIGH);
+    }
+    state = 0;
+    for (int i = 0; i < 4; ++i) { // Buttons for hats
+      state |= (button_state[i] ? 1 << i : 0);
+    }
+    Joystick.HAT = hat_mapping[state]; 
+    Joystick.sendState();
+    Joystick.Button = SWITCH_BTN_NONE;
+    memset(pressed, 0, sizeof(pressed));
+    //Serial.print(ct);
+    //Serial.print('\t');
+    Serial.println((float)ct/cc);
+    ct = 0;
+    cc = 0;
+  }
+#endif
 
 #ifdef DEBUG_OUTPUT
   static bool printing = false;
-  if (si == 0) {
-    if (level[0]+level[1]+level[2]+level[3] >= min_threshold || cd[0] || cd[1] || cd[2] || cd[3]){
-      Serial.print(level[0]);
-      Serial.print("\t");
-      Serial.print(level[1]);
-      Serial.print("\t");
-      Serial.print(level[2]);
-      Serial.print("\t");
-      Serial.print(level[3]);
-      Serial.print("\t| ");
-      Serial.print(cd[0] == 0 ? "  " : pressed[0] ? "# " : "* ");
-      Serial.print(cd[1] == 0 ? "  " : pressed[1] ? "# " : "* ");
-      Serial.print(cd[2] == 0 ? "  " : pressed[2] ? "# " : "* ");
-      Serial.print(cd[3] == 0 ? "  " : pressed[3] ? "# " : "* ");
-      Serial.print("|\t");
-      Serial.print((int)threshold[0]);
-      Serial.print("\t");
-      Serial.print((int)threshold[1]);
-      Serial.print("\t");
-      Serial.print((int)threshold[2]);
-      Serial.print("\t");
-      Serial.print((int)threshold[3]);
-      Serial.println();
-      printing = true;
-    }else if(printing){
-      Serial.println("=============================================================================");
-      printing = false;
-    }
+#ifdef DEBUG_OUTPUT_LIVE
+  if (true)
+#else
+  if (threshold[0] > min_threshold || threshold[1] > min_threshold ||
+      threshold[2] > min_threshold || threshold[3] > min_threshold)
+#endif
+  {
+    Serial.print(level[0], 1);
+    Serial.print("\t");
+    Serial.print(level[1], 1);
+    Serial.print("\t");
+    Serial.print(level[2], 1);
+    Serial.print("\t");
+    Serial.print(level[3], 1);
+    Serial.print("\t| ");
+    Serial.print(cd[0] == 0 ? "  " : down[0] ? "# " : "* ");
+    Serial.print(cd[1] == 0 ? "  " : down[1] ? "# " : "* ");
+    Serial.print(cd[2] == 0 ? "  " : down[2] ? "# " : "* ");
+    Serial.print(cd[3] == 0 ? "  " : down[3] ? "# " : "* ");
+    Serial.print("|\t");
+    Serial.print(threshold[0], 1);
+    Serial.print("\t");
+    Serial.print(threshold[1], 1);
+    Serial.print("\t");
+    Serial.print(threshold[2], 1);
+    Serial.print("\t");
+    Serial.print(threshold[3], 1);
+    Serial.println();
+    printing = true;
+  }else if(printing){
+    Serial.println("=============================================================================");
+    printing = false;
   }
 #endif
 
   sampleSingle(si);
   si = key_next[si];
+
+  long ddt = 300 - (micros() - t0);
+  if(ddt > 3) delayMicroseconds(ddt);
   
 }
