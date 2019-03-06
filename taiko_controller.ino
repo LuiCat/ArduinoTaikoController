@@ -1,7 +1,11 @@
-//#define DEBUG_OUTPUT
-//#define DEBUG_OUTPUT_LIVE
-//#define ENABLE_KEYBOARD
+#include "AnalogReadNow.h"
 
+#define DEBUG_OUTPUT
+//#define DEBUG_OUTPUT_LIVE
+//#define DEBUG_TIME
+//#define DEBUG_DATA
+
+//#define ENABLE_KEYBOARD
 #define ENABLE_NS_JOYSTICK
 
 #ifdef ENABLE_KEYBOARD
@@ -28,19 +32,18 @@ int button_state[16] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 int button_cd[16] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 #endif
 
-const int min_threshold = 10;
-const long cd_length = 16000;
-const long cd_antireso_length = 16000;
+const int min_threshold = 6;
+const long cd_length = 8000;
+const long cd_antireso_length = 8000;
 const float k_threshold = 1.5;
 const float k_antireso = 1.5;
-const float k_decay = 0.983;
+const float k_decay = 0.95;
 
 const int pin[4] = {A0, A3, A1, A2};
-const int key[4] = {'d', '
-f', 'j', 'k'};
-const float sens[4] = {1.0, 1.0, 0.8, 0.8};
+const int key[4] = {'d', 'f', 'j', 'k'};
+const float sens[4] = {1.0, 1.0, 1.0, 1.0};
 
-const int key_next[4] = {2, 0, 3, 1};
+const int key_next[4] = {3, 2, 0, 1};
 
 const long cd_stageselect = 200000;
 
@@ -72,12 +75,14 @@ void sample() {
 
 void sampleSingle(int i) {
   int prev = raw[i];
-  raw[i] = analogRead(pin[i]);
+  raw[i] = analogReadNow();
   level[i] = abs(raw[i] - prev) * sens[i];
+  analogSwitchPin(pin[key_next[i]]);
 }
 
 void setup() {
   analogReference(DEFAULT); // use internal 1.1v as reference voltage
+  analogSwitchPin(pin[0]);
   pinMode(LED_BUILTIN, OUTPUT);
   digitalWrite(LED_BUILTIN, LOW);
 #ifdef ENABLE_NS_JOYSTICK
@@ -157,12 +162,17 @@ void loop() {
   
   static int si = 0;
 
-  parseSerial();
+  //parseSerial();
   
   time_t t1 = micros();
   dt = t1 - t0;
   sdt += dt;
   t0 = t1;
+  
+  float prev_level = level[si];
+  sampleSingle(si);
+  float new_level = level[si];
+  level[si] = (level[si] + prev_level) / 2;
   
   for (int i = 0; i != 4; ++i)
     threshold[i] *= k_decay;
@@ -195,6 +205,16 @@ void loop() {
   if (i_max == si && level_max >= min_threshold) {
     if (cd[i_max] == 0) {
       if (!down[i_max]) {
+#ifdef DEBUG_DATA
+        Serial.print(level[0], 1);
+        Serial.print("\t");
+        Serial.print(level[1], 1);
+        Serial.print("\t");
+        Serial.print(level[2], 1);
+        Serial.print("\t");
+        Serial.print(level[3], 1);
+        Serial.print("\n");
+#endif
 #ifdef ENABLE_KEYBOARD
         if (stageresult) {
           Keyboard.press(KEY_ESC);
@@ -261,9 +281,9 @@ void loop() {
     Joystick.sendState();
     Joystick.Button = SWITCH_BTN_NONE;
     memset(pressed, 0, sizeof(pressed));
-    //Serial.print(ct);
-    //Serial.print('\t');
+#ifdef DEBUG_TIME
     Serial.println((float)ct/cc);
+#endif
     ct = 0;
     cc = 0;
   }
@@ -306,10 +326,10 @@ void loop() {
   }
 #endif
 
-  sampleSingle(si);
+  level[si] = new_level;
   si = key_next[si];
 
-  long ddt = 300 - (micros() - t0);
+  long ddt = 200 - (micros() - t0);
   if(ddt > 3) delayMicroseconds(ddt);
   
 }
