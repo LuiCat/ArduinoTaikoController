@@ -1,0 +1,38 @@
+
+##############################################################
+#       Nintendo Switch Controller for Micro/Leonardo        #
+##############################################################
+
+ns_con.name=Nintendo Switch Controller (Micro)
+
+ns_con.vid.1=0x0F0D
+ns_con.pid.1=0x0092
+
+ns_con.upload.tool=avrdude
+ns_con.upload.protocol=avr109
+ns_con.upload.maximum_size=28672
+ns_con.upload.maximum_data_size=2560
+ns_con.upload.speed=57600
+ns_con.upload.disable_flushing=true
+ns_con.upload.use_1200bps_touch=true
+ns_con.upload.wait_for_upload_port=true
+
+ns_con.bootloader.tool=avrdude
+ns_con.bootloader.low_fuses=0xff
+ns_con.bootloader.high_fuses=0xd8
+ns_con.bootloader.extended_fuses=0xcb
+ns_con.bootloader.file=caterina/Caterina-Micro.hex
+ns_con.bootloader.unlock_bits=0x3F
+ns_con.bootloader.lock_bits=0x2F
+
+ns_con.build.mcu=atmega32u4
+ns_con.build.f_cpu=16000000L
+ns_con.build.board=AVR_MICRO
+ns_con.build.core=arduino
+ns_con.build.variant=micro
+
+ns_con.build.vid=0x0F0D
+ns_con.build.pid=0x0092
+ns_con.build.usb_manufacturer="HORI CO.,LTD."
+ns_con.build.usb_product="POKKEN CONTROLLER"
+ns_con.build.extra_flags={build.usb_flags}
