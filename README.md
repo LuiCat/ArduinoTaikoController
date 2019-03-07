@@ -58,7 +58,7 @@ As the sensors should have biased input voltages, the sensor levels are actually
 
 To deal with four analog inputs, we read the sensor levels one at a time, and only do the triggering mechanisms for this sensor. To compensate the time difference, the sensor level for the current one will be a mix of values from previous read and current read. Also, a non-default non-blocking version of ```analogRead``` is used to guarantee more stablization time after a channel switch of arduino's internal ADC chip.
 
-To deal with Nintendo Switch, I used the descriptor for Hori's Pokken fightstick to let Switch trust Arduino as a valid controller device (see the [credits](#credits) section). The default buttons from the four sensors are the analog stick buttons (press the sticks down) and the trigger buttons (ZL and ZR).
+To deal with Nintendo Switch, I used the HID descriptor for Hori's Pokken fightstick to let Switch trust Arduino as a valid controller device (see the [credits](#credits) section). The default buttons from the four sensors are the analog stick buttons (press the sticks down) and the trigger buttons (ZL and ZR).
 
 ## Parameters (with suggested values)
 
@@ -108,4 +108,7 @@ A typical output could be:
 
 ## Credits
 
+- This sketch make use of Arduino IDE and its useful library. A modified version of the Arduino library is used to allow us to make a valid Nintendo Switch controller.
+- The HID descriptor are a reverse engineering of Pokken Tournament Pro Pad of progmem's work: [progmem/Switch-Fightstick](https://github.com/progmem/Switch-Fightstick)
+- The HID descriptor are coded using many useful macros and functions from [LUFA Library](http://www.fourwalledcubicle.com/LUFA.php)
 
