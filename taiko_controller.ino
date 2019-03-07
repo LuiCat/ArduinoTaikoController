@@ -34,7 +34,6 @@ int button_cd[16] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
 const int min_threshold = 15;
 const long cd_length = 10000;
-const long cd_antireso_length = 10000;
 const float k_threshold = 1.5;
 const float k_decay = 0.97;
 
@@ -80,7 +79,7 @@ void sampleSingle(int i) {
 }
 
 void setup() {
-  analogReference(DEFAULT); // use internal 1.1v as reference voltage
+  analogReference(DEFAULT);
   analogSwitchPin(pin[0]);
   pinMode(LED_BUILTIN, OUTPUT);
   digitalWrite(LED_BUILTIN, LOW);
@@ -228,8 +227,11 @@ void loop() {
 #endif
       }
       for (int i = 0; i != 4; ++i)
-        cd[i] = cd_antireso_length;
-      cd[i_max] = (stageselect ? cd_stageselect : cd_length);
+        cd[i] = cd_length;
+#ifdef ENABLE_KEYBOARD
+      if (stageselect)
+        cd[i_max] = cd_stageselect;
+#endif
     }
     sdt = 0;
   }
