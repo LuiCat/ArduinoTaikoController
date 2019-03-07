@@ -1,6 +1,6 @@
 #include "AnalogReadNow.h"
 
-#define DEBUG_OUTPUT
+//#define DEBUG_OUTPUT
 //#define DEBUG_OUTPUT_LIVE
 //#define DEBUG_TIME
 //#define DEBUG_DATA
@@ -32,12 +32,11 @@ int button_state[16] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 int button_cd[16] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 #endif
 
-const int min_threshold = 6;
-const long cd_length = 8000;
-const long cd_antireso_length = 8000;
+const int min_threshold = 15;
+const long cd_length = 10000;
+const long cd_antireso_length = 10000;
 const float k_threshold = 1.5;
-const float k_antireso = 1.5;
-const float k_decay = 0.95;
+const float k_decay = 0.97;
 
 const int pin[4] = {A0, A3, A1, A2};
 const int key[4] = {'d', 'f', 'j', 'k'};
@@ -50,7 +49,7 @@ const long cd_stageselect = 200000;
 bool stageselect = false;
 bool stageresult = false;
 
-float threshold[4] = {20, 20, 20, 20};
+float threshold = 20;
 int raw[4] = {0, 0, 0, 0};
 float level[4] = {0, 0, 0, 0};
 long cd[4] = {0, 0, 0, 0};
@@ -162,7 +161,9 @@ void loop() {
   
   static int si = 0;
 
-  //parseSerial();
+#ifdef ENABLE_KEYBOARD
+  parseSerial();
+#endif
   
   time_t t1 = micros();
   dt = t1 - t0;
@@ -172,10 +173,9 @@ void loop() {
   float prev_level = level[si];
   sampleSingle(si);
   float new_level = level[si];
-  level[si] = (level[si] + prev_level) / 2;
+  level[si] = (level[si] + prev_level * 2) / 3;
   
-  for (int i = 0; i != 4; ++i)
-    threshold[i] *= k_decay;
+  threshold *= k_decay;
 
   for (int i = 0; i != 4; ++i) {
     if (cd[i] > 0) {
@@ -196,7 +196,7 @@ void loop() {
   int level_max = 0;
   
   for (int i = 0; i != 4; ++i) {
-    if (level[i] > level_max && level[i] > threshold[i]) {
+    if (level[i] > level_max && level[i] > threshold) {
       level_max = level[i];
       i_max = i;
     }
@@ -231,11 +231,11 @@ void loop() {
         cd[i] = cd_antireso_length;
       cd[i_max] = (stageselect ? cd_stageselect : cd_length);
     }
-    float level_antireso = level_max * k_antireso;
-    for (int i = 0; i != 4; ++i)
-      threshold[i] = max(threshold[i], level_antireso);
-    threshold[i_max] = level_max * k_threshold;
     sdt = 0;
+  }
+
+  if (cd[i_max] > 0) {
+    threshold = max(threshold, level_max * k_threshold);
   }
   
 #ifdef ENABLE_NS_JOYSTICK
@@ -282,7 +282,8 @@ void loop() {
     Joystick.Button = SWITCH_BTN_NONE;
     memset(pressed, 0, sizeof(pressed));
 #ifdef DEBUG_TIME
-    Serial.println((float)ct/cc);
+    if (cc > 0)
+      Serial.println((float)ct/cc);
 #endif
     ct = 0;
     cc = 0;
@@ -294,10 +295,10 @@ void loop() {
 #ifdef DEBUG_OUTPUT_LIVE
   if (true)
 #else
-  if (threshold[0] > min_threshold || threshold[1] > min_threshold ||
-      threshold[2] > min_threshold || threshold[3] > min_threshold)
+  if (printing || (/*down[0] &&*/ threshold > 10))
 #endif
   {
+    printing = true;
     Serial.print(level[0], 1);
     Serial.print("\t");
     Serial.print(level[1], 1);
@@ -311,25 +312,19 @@ void loop() {
     Serial.print(cd[2] == 0 ? "  " : down[2] ? "# " : "* ");
     Serial.print(cd[3] == 0 ? "  " : down[3] ? "# " : "* ");
     Serial.print("|\t");
-    Serial.print(threshold[0], 1);
-    Serial.print("\t");
-    Serial.print(threshold[1], 1);
-    Serial.print("\t");
-    Serial.print(threshold[2], 1);
-    Serial.print("\t");
-    Serial.print(threshold[3], 1);
+    Serial.print(threshold, 1);
     Serial.println();
-    printing = true;
-  }else if(printing){
-    Serial.println("=============================================================================");
-    printing = false;
-  }
+    if(threshold <= 5){
+      Serial.println();
+      printing = false;
+    }
+  } 
 #endif
 
   level[si] = new_level;
   si = key_next[si];
 
-  long ddt = 200 - (micros() - t0);
+  long ddt = 300 - (micros() - t0);
   if(ddt > 3) delayMicroseconds(ddt);
   
 }
