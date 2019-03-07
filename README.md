@@ -2,69 +2,110 @@
 
 Sketch for Arduino based taiko game controller circuit
 
+## Software Setup
+
+Install the latest version of Arduino IDE from the official website: [https://www.arduino.cc/en/Main/Software](https://www.arduino.cc/en/Main/Software)
+
+To enable nintendo switch functionality, replace the following files with the ones provided in "setup" folder:
+
+- <your arduino installation path>/hardware/arduino/avr/libraries/HID/src/HID.h
+- <your arduino installation path>/hardware/arduino/avr/libraries/HID/src/HID.cpp
+
+Then copy the text in board.txt in "setup" folder and append it to the following file:
+
+- <your arduino installation path>/hardware/arduino/avr/boards.txt
+
+To enable or disable keyboard and Nintendo Switch controller functionality, remove or add two charactors "//" before these two lines in taiko_controller.ino:
+
+```
+//#define ENABLE_KEYBOARD
+#define ENABLE_NS_JOYSTICK
+```
+
 ## Circuit Setup
 
-For most of the times, pluging the sensors directly into Arduino's analog pins will work.
-But for most of the times you'd better connect a resistor in parallel or an RC low-pass circuit for each sensor.
+Connect the sensors to the 3.3v pin and the analog pins according to the diagram below:
 
-For different types of sensors, you have to determine the amplitute of output level on arduino.
-By using a maximum reference voltage and enabling debug info you can see the input voltage level in 1/1024 of the reference voltage.
-Then you should choose a reference voltage wisely, using either pre-built 5V/1.1V or external voltage sources.
+![](https://i.loli.net/2019/03/07/5c812d28e0978.png)
+
+The mapping of the sensors by default should be:
+
+- Left Rim: A0
+- Left Surface: A3
+- Right Surface: A1
+- Right Rim: A2
+
+To customize the mapping, checkout the [parameter](#parameters-with-suggested-values) section.
+
+For most of the times, pluging the sensors directly into Arduino's pins will work.
+If the controller seems to be generating random inputs, you can fix this by plugging some 1MΩ resistors in parallel:
+
+![](https://i.loli.net/2019/03/07/5c812d28e101d.png)
+
+For best performance, the sensors must be piezo sensors (a.k.a. peizo speakers, contact microphones). No guarantee if other types of sensors will simply work, but if analog signals with voltage ranged 0-5V are fed into analog pins, this setup should be good to go.
+
+For further improvements, you can use some diodes to limit the voltage of the piezo sensors, or use a 2.5v power supply, but this won't matter in most cases, at least on my side.
+
+If you can somehow connect a 4x4 matrix keyboard (no pull-up resistors needed) to Arduino's digital pin 0-15, it will work as a controller along with the drum:
+
+![](https://i.loli.net/2019/03/07/5c813dc59e6a0.png)
 
 ## Algorithm
 
-This controller program uses a dynamic threshold of sensor input levels to trigger an input.
-Everytime a sensor gives a significantly higher input level, the algorithm sets the threshold of this sensor to that input level, and gradually lowers the threshold.
-To avoid picking up inputs from other sensors erroneously, when a sensor is recognized as triggered, the threshold level of all other sensors is raised as well.
-Also, a cooldown length will be added to all sensors so to ignore the unstable levels near a drum hit.
+This sketch uses a dynamic threshold of sensor levels to trigger inputs. Whenever the sensor level from one sensor is higher than the threshold, a keyboard or Nintendo Switch controller input is generated, then the sensors will be put into a cooldown period. When an input is triggered or during cooldown period, the threshold will be raised to a ratio of current sensor levels, and after that the threshold will gradually decay by ratio, to hopefully be an envolope of the waves of sensor levels.
+
+As the sensors should have biased input voltages, the sensor levels are actually the differential value of the analog value from ```analogRead```.
+
+To deal with four analog inputs, we read the sensor levels one at a time, and only do the triggering mechanisms for this sensor. To compensate the time difference, the sensor level for the current one will be a mix of values from previous read and current read. Also, a non-default non-blocking version of ```analogRead``` is used to guarantee more stablization time after a channel switch of arduino's internal ADC chip.
+
+To deal with Nintendo Switch, I used the descriptor for Hori's Pokken fightstick to let Switch trust Arduino as a valid controller device (see the [credits](#credits) section). The default buttons from the four sensors are the analog stick buttons (press the sticks down) and the trigger buttons (ZL and ZR).
 
 ## Parameters (with suggested values)
 
-#### min_threshold = 20
-The minimum level that a trigger is recognized for all sensors.
+#### min_threshold = 15
+The minimum value for sensor levels to trigger inputs for all sensors.
 
 To determine an optimal value for this level, try enabling debug info.
 Usually, this value is only used to ignore sensor noises, but you can use this level as a sensitivity level.
 
-#### cd_length = 8000
-The cooldown length of the triggered sensor, in microseconds (=1x10^-6s).
+#### cd_length = 10000
+The cooldown length of sensors, in microseconds (=1x10^-6s).
 
-While a sensor is in its cooldown period, no input will be generated for it, but the threshold level would still be updated.
+While a sensor is in its cooldown period, no input will be triggered ignoring the sensor level. The threshold level would still be updated if the sensor levels go high.
 During the cooldown period, the corresponding key of the sensor is kept pressed. When it ended, the key is released.
 
-#### cd_antireso_length = 8000
-The cooldown length of sensors other than the triggered one, in microseconds.
+#### k_threshold = 1.5
+How much the threshold value is raised to, in ratio to the sensor level.
 
-When there's a drum hit on one part of the drum, other parts will still have fluctuations in sensor levels.
-By using cooldown periods for sensors other than the triggered one, we are able to let these sensors settle down and also get their threshold level updated,
-so that there will not be any mistrigger after the cooldown period expires.
+#### k_decay = 0.97
+How fast every threshold level decays, in ratio per refresh (about 300ms).
 
-#### k_antireso = 0.85
-How much the thresholds of every sensor other than the triggered one are raised to, in ratio to the threshold of the triggered sensor.
+For every refresh, the threshold value is multiplied by k_decay.
 
-#### k_decay = 0.96
-How fast every threshold level decays, in ratio.
-
-For approximately every millisecond, the threshold value of every channel is multiplied by k_decay.
-
-#### pin[4] = {A3, A0, A2, A1}
+#### pin[4] = {A0, A3, A1, A2}
 The analog input pins of four sensors.
 
 #### key[4] = {'d', 'f', 'j', 'k'}
-The key mapping of four sensors.
+The key mapping of four sensors, if keyboard inputs are enabled.
+
+#### sens[4] = {1.0, 1.0, 1.0, 1.0};
+Sensitivity of every sensor. All sensor levels are scaled by these values respectively before use.
 
 ## Debug Info
 
-If the macro ```DEBUG_OUTPUT``` is enabled, there will be debug info printed via serial. Take a look at your serial monitor.
+If the line ```#define DEBUG_OUTPUT``` is enabled, there will be debug info printed via serial. Take a look at your serial monitor.
 
-The first 4 rows indicates current vibration level of the four sensors, and the last 4 rows indicates the minimum level for a sensor to trigger a input;
-the symbols in the middle shows current status of the sensors, # for input triggered and * for anti-resonance state.
+The first 4 columns indicate current vibration level of the four sensors, and the last column indicates the threshold level for a sensor to trigger a input;
+the symbols in the middle shows current status of the sensors, # for input triggered and * for cooldown state.
 
 A typical output could be:
 
 ```
-0  3  13 63 |         | 0  0  0  0
-51 2  11 58 | * * * # | 53 53 53 63
-83 5  9  24 | # * * # | 83 70 70 70
+0  3  13 63 |         | 0
+51 2  11 58 | * * * # | 53
+83 5  9  24 | # * * # | 83
 ```
+
+## Credits
+
 
