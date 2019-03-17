@@ -12,12 +12,12 @@ Install the latest version of Arduino IDE from the official website: [https://ww
 
 Before starting Arduino IDE, to enable nintendo switch functionality, replace the following files with the ones provided in "setup" folder:
 
-- <your arduino installation path>/hardware/arduino/avr/libraries/HID/src/HID.h
-- <your arduino installation path>/hardware/arduino/avr/libraries/HID/src/HID.cpp
+- `<your arduino installation path>/hardware/arduino/avr/libraries/HID/src/HID.h`
+- `<your arduino installation path>/hardware/arduino/avr/libraries/HID/src/HID.cpp`
 
 Then copy the text in board.txt in "setup" folder and append it to the following file:
 
-- <your arduino installation path>/hardware/arduino/avr/boards.txt
+- `<your arduino installation path>/hardware/arduino/avr/boards.txt`
 
 If you've successfully done all the modifications above, you should be able to see the board called "Nintendo Switch Controller" next time you start Arduino IDE:
 
