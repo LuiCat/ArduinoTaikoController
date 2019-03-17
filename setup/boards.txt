@@ -3,7 +3,7 @@
 #       Nintendo Switch Controller for Micro/Leonardo        #
 ##############################################################
 
-ns_con.name=Nintendo Switch Controller (Micro)
+ns_con.name=Nintendo Switch Controller (Micro/Leo)
 
 ns_con.vid.1=0x0F0D
 ns_con.pid.1=0x0092

@@ -8,22 +8,6 @@
  *  https://github.com/progmem/Switch-Fightstick/blob/master/Joystick.h
 ***/
 
-// Functions added to HID_ class
-// Don't forget to add definitions in HID.h, which is located at:
-// <arduino installation path>\hardware\arduino\avr\libraries\HID\src\
-
-void HID_::PrependDescriptor(HIDSubDescriptor *node)
-{
-  node->next = rootNode;
-  rootNode = node;
-  descriptorSize += node->length;
-}
-
-int HID_::SendRaw(const void* data, int len)
-{
-  return USB_Send(pluggedEndpoint | TRANSFER_RELEASE, data, len);
-}
-
 /*** 
  *  Descriptor modified from 
  *  progmem/Switch-Fightstick/Joystick.c
@@ -100,4 +84,3 @@ void Joystick_::sendState()
 }
 
 Joystick_ Joystick;
-
