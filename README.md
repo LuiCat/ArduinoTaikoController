@@ -1,3 +1,7 @@
+# Notice for Window 7 users!
+
+By enabling Nintendo Switch control, you are not able to upload the code for some driver issues. This problem will be addressed soon in this tutorial and a custom driver file will be appended here.
+
 # ArduinoTaikoController
 
 Sketch for Arduino based taiko game controller circuit
