@@ -2,6 +2,10 @@
 
 ## 软件配置
 
+### Windows 10
+
+Windows 7 用户请注意，在win7平台无法为已经上传过本代码的Arduino再次上传代码，原因是因为设备无法被识别为Arduino，而被认为是NS控制器（POKKEN CONTROLLER）导致的。请务必找一台Win10的电脑上传代码，如果实在做不到的话，需要手动修改Arduino驱动文件中的ini文件，将上传过一次代码的Arduino在设备属性中查到的设备ID写入到ini文件的列表里，并为被识别为POKKEN CONTROLLER的Arduino重新安装驱动。
+
 ### Arduino IDE
 
 在Arduino官网下载Arduino IDE这款软件，用来上传代码到Arduino板：[https://www.arduino.cc/en/Main/Software?setlang=cn](https://www.arduino.cc/en/Main/Software?setlang=cn)
