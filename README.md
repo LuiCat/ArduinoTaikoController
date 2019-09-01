@@ -1,12 +1,12 @@
 # ArduinoTaikoController
 
-Sketch for Arduino based taiko game controller circuit for PC and Nintendo Switch
+Sketch for Arduino Leonardo/Micro based taiko game controller circuit for PC and Nintendo Switch
 
 ## Software Setup
 
 ### Windows 10
 
-If you are using windows 7, you are not able to upload the code for the second time, because of some driver issues. You have to edit the .ini file and add the details of this device in the arduino driver file in order to fix this problem. If you have to use Nintendo Switch functions, please do the following steps on a Windows 10 computer.
+If you are using windows 7, you are not able to upload the code for the second time, because of some driver issues. You have to edit the .ini file and add the details of this device in the Arduino driver file to fix this problem. If you have to use Nintendo Switch functions, please do the following steps on a Windows 10 computer.
 
 ### Arduino IDE
 
@@ -31,7 +31,7 @@ Please select this board before uploading the code as this is essential for your
 
 ### Keyboard or Nintendo Switch Controller
 
-To enable or disable keyboard and Nintendo Switch controller functionality, remove or add two charactors "//" before these two lines in taiko_controller.ino:
+To enable or disable keyboard or Nintendo Switch controller functionality, remove or add two characters "//" before these two lines in taiko_controller.ino:
 
 - To enable Switch controller only
 ```
@@ -53,7 +53,7 @@ To enable or disable keyboard and Nintendo Switch controller functionality, remo
 
 ### Materials
 
-To setup the circuit, you need an Arduino Leonardo, a set of four piezo sensors, and four 1MΩ resistors for some special cases.
+To set up the circuit, you need an Arduino Leonardo, a set of four piezo sensors, and four 1MΩ resistors for some special cases.
 
 ### Connect the Circuit
 
@@ -70,7 +70,7 @@ The mapping of the sensors by default should be:
 
 To customize the mapping, checkout the [parameter](#parameters-with-suggested-values) section.
 
-For most of the times, pluging the sensors directly into Arduino's pins will work.
+For most of the times, plugging the sensors directly into Arduino's pins will work.
 If the controller seems to be generating random inputs, you can fix this by plugging some 1MΩ resistors in parallel:
 
 ![](https://i.loli.net/2019/03/07/5c812d28e101d.png)
@@ -87,15 +87,15 @@ If you can somehow connect a 4x4 matrix keyboard (no pull-up resistors needed) t
 
 ## Algorithm
 
-This sketch uses a dynamic threshold of sensor levels to trigger inputs. Whenever the sensor level from one sensor is higher than the threshold, a keyboard or Nintendo Switch controller input is generated, then the sensors will be put into a cooldown period. When an input is triggered or during cooldown period, the threshold will be raised to a ratio of current sensor levels, and after that the threshold will gradually decay by ratio, to hopefully be an envolope of the waves of sensor levels.
+This sketch uses a dynamic threshold of sensor levels to trigger inputs. Whenever the sensor level from one sensor is higher than the threshold, a keyboard or Nintendo Switch controller input is generated, then the sensors will be put into a cooldown period. When an input is triggered or during cooldown period, the threshold will be raised to a ratio of current sensor levels, and after that the threshold will gradually decay by ratio, to hopefully be an envelope of the waves of sensor levels.
 
-As the sensors should have biased input voltages, the sensor levels are actually the differential value of the analog value from ```analogRead```.
+As the sensors should have biased input voltages, the sensor levels are the differential value of the analog value from ```analogRead```.
 
-To deal with four analog inputs, we read the sensor levels one at a time, and only do the triggering mechanisms for this sensor. To compensate the time difference, the sensor level for the current one will be a mix of values from previous read and current read. Also, a customized non-blocking version of ```analogRead``` is used to guarantee more stablization time after a channel switch of arduino's internal ADC chip.
+To deal with four analog inputs, we read the sensor levels one at a time and only do the triggering mechanisms for this sensor. To compensate for the time difference, the sensor level for the current one will be a mix of values from previous read and current read. Also, a customized non-blocking version of ```analogRead``` is used to guarantee more stabilization time after a channel switch of Arduino's internal ADC chip.
 
 To deal with Nintendo Switch, I used the HID descriptor for Hori's Pokken fightstick to let Switch trust Arduino as a valid controller device (see the [credits](#credits) section). The default buttons from the four sensors are the analog stick buttons (press the sticks down) and the trigger buttons (ZL and ZR).
 
-As VID and PID of the controller have to be the specific value, the setup to boards.txt is essential. Also, Switch seems also to be judging the device strictly by the first-come HID descriptor of the device, so Arduino's default HID behavior have to be altered to have our customized HID descriptor to work.
+As VID and PID of the controller have to be the specific value, the setup to boards.txt is essential. Also, Switch seems to be judging the device strictly by the first-come HID descriptor of the device, so Arduino's default HID behavior have to be altered to have our customized HID descriptor to work.
 
 ## Parameters (with suggested values)
 
@@ -130,10 +130,10 @@ Sensitivity of every sensor. All sensor levels are scaled by these values respec
 
 ## Debug Info
 
-If the line ```#define DEBUG_OUTPUT``` is enabled, there will be debug info printed via serial. Take a look at your serial monitor.
+If the line ```#define DEBUG_OUTPUT``` is enabled, there will be debug information printed via serial. Take a look at your serial monitor.
 
-The first 4 columns indicate current vibration level of the four sensors, and the last column indicates the threshold level for a sensor to trigger a input;
-the symbols in the middle shows current status of the sensors, # for input triggered and * for cooldown state.
+The first 4 columns indicate the current vibration level of the four sensors, and the last column indicates the threshold level for a sensor to trigger an input;
+the symbols in the middle show the current status of the sensors, # for input triggered and * for cooldown state.
 
 A typical output could be:
 
@@ -145,7 +145,7 @@ A typical output could be:
 
 ## Credits
 
-- This sketch make use of Arduino IDE and its useful library. A modified version of the Arduino library is used to allow us to make a valid Nintendo Switch controller.
-- The HID descriptor are a reverse engineering of Pokken Tournament Pro Pad of progmem's work: [progmem/Switch-Fightstick](https://github.com/progmem/Switch-Fightstick)
-- The HID descriptor are coded using many useful macros and functions from [LUFA Library](http://www.fourwalledcubicle.com/LUFA.php)
+- This sketch makes use of Arduino IDE and its useful library. A modified version of the Arduino library is used to allow us to make a valid Nintendo Switch controller.
+- The HID descriptor is from progmem's work of reverse engineering of Pokken Tournament Pro Pad: [progmem/Switch-Fightstick](https://github.com/progmem/Switch-Fightstick)
+- The HID descriptor is coded using many useful macros and functions from [LUFA Library](http://www.fourwalledcubicle.com/LUFA.php)
 
