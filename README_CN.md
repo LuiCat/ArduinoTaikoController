@@ -4,7 +4,7 @@
 
 ### Windows 10
 
-Windows 7 用户请注意，在win7平台无法为已经上传过本代码的Arduino再次上传代码，原因是因为设备无法被识别为Arduino，而被认为是NS控制器（POKKEN CONTROLLER）导致的。请务必找一台Win10的电脑上传代码，如果实在做不到的话，需要手动修改Arduino驱动文件中的ini文件，将上传过一次代码的Arduino在设备属性中查到的设备ID写入到ini文件的列表里，并为被识别为POKKEN CONTROLLER的Arduino重新安装驱动。
+Windows 7 用户请注意，在win7平台一旦为Arduino上传过代码，不经过特殊操作便无法再次上传代码，如无必要请尽量使用Window 10操作系统。原因与解决办法如下：因为上传一次代码后，Arduino便会按照预定的那样伪装成NS控制器（设备名显示为POKKEN CONTROLLER），而win7无法识别这个硬件变动，没法自动给这个新硬件匹配上Arduino的驱动。如果实在避免不了使用win7，请手动修改Arduino驱动文件中的arduino.inf文件，将上传过一次代码的Arduino在设备属性中查到的设备ID写入到inf文件的列表里，并为被识别为POKKEN CONTROLLER的Arduino重新安装驱动。在本项目setup文件夹里有一份arduino-sample.inf文件，可以作为修改的参考，但是这份文件不保证能够直接使用，请自己负责修改。
 
 ### Arduino IDE
 
@@ -12,7 +12,7 @@ Windows 7 用户请注意，在win7平台无法为已经上传过本代码的Ard
 
 ### 软件魔改与Nintendo Switch相关
 
-如果想要启动对Nintendo Switch的控制支持，你需要对Arduino IDE进行魔改。在setup文件夹找到HID.h和HID.cpp文件，替换掉如下位置的两个文件：
+如果想要启动对Nintendo Switch的控制支持，你需要对Arduino IDE进行魔改，魔改后的Arduino不影响正常功能的使用。在setup文件夹找到HID.h和HID.cpp文件，替换掉如下位置的两个文件：
 
 - `<Arduino IDE安装文件夹>/hardware/arduino/avr/libraries/HID/src/HID.h`
 - `<Arduino IDE安装文件夹>/hardware/arduino/avr/libraries/HID/src/HID.cpp`
@@ -27,21 +27,21 @@ Windows 7 用户请注意，在win7平台无法为已经上传过本代码的Ard
 
 如果需要启动Nintendo Switch相关功能，请务必将此项选为开发板，并且注意选择合适的上传端口（上传之后端口可能会变化）。
 
-### Keyboard or Nintendo Switch Controller
+### 切换键盘和NS手柄输出
 
-To enable or disable keyboard and Nintendo Switch controller functionality, remove or add two charactors "//" before these two lines in taiko_controller.ino:
+想要开启或者关闭键盘或NS手柄输出，请按照下面的内容相应修改taiko_controller.ino开头附近的两行代码：
 
-- To enable Switch controller only
+- 仅启用NS手柄输出
 ```
 //#define ENABLE_KEYBOARD
 #define ENABLE_NS_JOYSTICK
 ```
-- To enable keyboard only
+- 仅启用键盘输出
 ```
 #define ENABLE_KEYBOARD
 //#define ENABLE_NS_JOYSTICK
 ```
-- To enable both (not tested)
+- 两者同时使用（未进行测试）
 ```
 #define ENABLE_KEYBOARD
 #define ENABLE_NS_JOYSTICK
