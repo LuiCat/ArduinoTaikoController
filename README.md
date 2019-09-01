@@ -1,6 +1,6 @@
 # ArduinoTaikoController
 
-Sketch for Arduino Leonardo/Micro based taiko game controller circuit for PC and Nintendo Switch
+Sketch for Arduino Leonardo/Micro based controller circuit for taiko games on PC and Nintendo Switch
 
 ## Software Setup
 
