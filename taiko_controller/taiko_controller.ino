@@ -8,6 +8,8 @@
 //#define ENABLE_KEYBOARD
 #define ENABLE_NS_JOYSTICK
 
+//#define HAS_BUTTONS
+
 #ifdef ENABLE_KEYBOARD
 #include <Keyboard.h>
 #endif
@@ -16,6 +18,20 @@
 #include "Joystick.h"
 const int led_pin[4] = {8, 9, 10, 11};
 const int sensor_button[4] = {SWITCH_BTN_ZL, SWITCH_BTN_LCLICK, SWITCH_BTN_RCLICK, SWITCH_BTN_ZR};
+#endif
+
+#ifdef HAS_BUTTONS
+int button_state[16] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+int button_cd[16] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+#ifdef ENABLE_KEYBOARD
+const int button_key[16] = {
+  KEY_UP_ARROW, KEY_RIGHT_ARROW, KEY_DOWN_ARROW, KEY_LEFT_ARROW,
+  'k', 'j', 'f', 'd',
+  KEY_PAGE_DOWN, KEY_PAGE_UP, KEY_ESC, ' ',
+  KEY_F1, 'q', 0 /*Fn1*/, 0 /*Fn2*/
+};
+#endif
+#ifdef ENABLE_NS_JOYSTICK
 const int button[16] = {
   0 /*SWITCH_HAT_U*/, 0 /*SWITCH_HAT_R*/, 0 /*SWITCH_HAT_D*/, 0 /*SWITCH_HAT_L*/,
   SWITCH_BTN_X, SWITCH_BTN_A, SWITCH_BTN_B, SWITCH_BTN_Y,
@@ -28,8 +44,7 @@ const int hat_mapping[16] = {
   SWITCH_HAT_L, SWITCH_HAT_UL, SWITCH_HAT_CENTER, SWITCH_HAT_U,
   SWITCH_HAT_DL, SWITCH_HAT_L, SWITCH_HAT_D, SWITCH_HAT_CENTER,
 };
-int button_state[16] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-int button_cd[16] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+#endif
 #endif
 
 const int min_threshold = 15;
@@ -54,7 +69,7 @@ float level[4] = {0, 0, 0, 0};
 long cd[4] = {0, 0, 0, 0};
 bool down[4] = {false, false, false, false};
 #ifdef ENABLE_NS_JOYSTICK
-bool pressed[4] = {false, false, false, false};
+uint8_t down_count[4] = {0, 0, 0, 0};
 #endif
 
 typedef unsigned long time_t;
@@ -223,7 +238,7 @@ void loop() {
 #endif
         down[i_max] = true;
 #ifdef ENABLE_NS_JOYSTICK
-        pressed[i_max] = true;
+        if (down_count[i_max] <= 2) down_count[i_max] += 2;
 #endif
       }
       for (int i = 0; i != 4; ++i)
@@ -240,7 +255,7 @@ void loop() {
     threshold = max(threshold, level_max * k_threshold);
   }
   
-#ifdef ENABLE_NS_JOYSTICK
+#ifdef HAS_BUTTONS
   // 4x4 button scan, one row per cycle
   static int bi = 3;
   pinMode(bi+4, INPUT_PULLUP);
@@ -266,14 +281,27 @@ void loop() {
     if (state != bs[i] && bc[i] == 0) {
       bs[i] = state;
       bc[i] = 15000;
+#ifdef ENABLE_KEYBOARD
+      if (state) {
+        Keyboard.press(button_key[(bi << 2) + i]);
+      } else {
+        Keyboard.release(button_key[(bi << 2) + i]);
+      }
+#endif
     }
+#ifdef ENABLE_NS_JOYSTICK
     Joystick.Button |= (bs[i] ? button[(bi << 2) + i] : SWITCH_BTN_NONE);
+#endif
   }
+#endif
   
-  if (ct > 32000 || (ct > 8000 && (pressed[0] || pressed[1] || pressed[2] || pressed[3]))) {
+#ifdef ENABLE_NS_JOYSTICK
+  if (ct > 32000 || (ct > 8000 && (down_count[0] || down_count[1] || down_count[2] || down_count[3]))) {
     for (int i = 0; i < 4; ++i) { // Sensors
-      Joystick.Button |= (pressed[i] ? sensor_button[i] : SWITCH_BTN_NONE);
-      digitalWrite(led_pin[i], pressed[i] ? LOW : HIGH);
+      bool state = (down_count[i] & 1);
+      Joystick.Button |= (state ? sensor_button[i] : SWITCH_BTN_NONE);
+      down_count[i] -= !!down_count[i];
+      digitalWrite(led_pin[i], state ? LOW : HIGH);
     }
     state = 0;
     for (int i = 0; i < 4; ++i) { // Buttons for hats
@@ -282,7 +310,6 @@ void loop() {
     Joystick.HAT = hat_mapping[state]; 
     Joystick.sendState();
     Joystick.Button = SWITCH_BTN_NONE;
-    memset(pressed, 0, sizeof(pressed));
 #ifdef DEBUG_TIME
     if (cc > 0)
       Serial.println((float)ct/cc);
