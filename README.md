@@ -38,7 +38,7 @@ To enable or disable keyboard or Nintendo Switch controller functionality, remov
 //#define ENABLE_KEYBOARD
 #define ENABLE_NS_JOYSTICK
 ```
-- To enable keyboard only
+- To enable keyboard only (PC only, doesn't work on Switch)
 ```
 #define ENABLE_KEYBOARD
 //#define ENABLE_NS_JOYSTICK
