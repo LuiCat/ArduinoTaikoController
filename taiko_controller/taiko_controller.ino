@@ -255,6 +255,11 @@ void loop() {
     threshold = max(threshold, level_max * k_threshold);
   }
   
+  static time_t ct = 0;
+  static int cc = 0;
+  ct += dt;
+  cc += 1;
+
 #ifdef HAS_BUTTONS
   // 4x4 button scan, one row per cycle
   static int bi = 3;
@@ -262,12 +267,7 @@ void loop() {
   bi = ((bi+1)&3);
   pinMode(bi+4, OUTPUT);
   digitalWrite(bi+4, LOW);
-  
-  static time_t ct = 0;
-  static int cc = 0;
-  ct += dt;
-  cc += 1;
-  
+    
   int state;
   int* bs = button_state + (bi << 2);
   int* bc = button_cd + (bi << 2);
