@@ -303,10 +303,12 @@ void loop() {
       down_count[i] -= !!down_count[i];
       digitalWrite(led_pin[i], state ? LOW : HIGH);
     }
+#ifdef HAS_BUTTONS
     state = 0;
     for (int i = 0; i < 4; ++i) { // Buttons for hats
       state |= (button_state[i] ? 1 << i : 0);
     }
+#endif
     Joystick.HAT = hat_mapping[state]; 
     Joystick.sendState();
     Joystick.Button = SWITCH_BTN_NONE;
