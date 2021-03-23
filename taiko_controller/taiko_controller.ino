@@ -308,8 +308,8 @@ void loop() {
     for (int i = 0; i < 4; ++i) { // Buttons for hats
       state |= (button_state[i] ? 1 << i : 0);
     }
-#endif
     Joystick.HAT = hat_mapping[state]; 
+#endif
     Joystick.sendState();
     Joystick.Button = SWITCH_BTN_NONE;
 #ifdef DEBUG_TIME
